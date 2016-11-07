@@ -63,7 +63,7 @@ for(i=0;i<source1list.length;i++){
 	setSlice(1);
 	run("Set Label...", "label="+titlet+"_"+0);
 	run("Label...", "format=Label starting=0 interval=1 x=5 y=5 font=8 text=[] range=1-51 use");
-	saveAs("Tiff",threshold1dir+titlet+"_"+channel1);
+	saveAs("Tiff",threshold1dir+titlet);
 	close();
 	
 	
@@ -95,7 +95,7 @@ for(i=0;i<source1list.length;i++){
 	setSlice(1);
 	run("Set Label...", "label="+titlet+"_"+0);
 	run("Label...", "format=Label starting=0 interval=1 x=5 y=5 font=8 text=[] range=1-51 use");
-	saveAs("Tiff",threshold2dir+titlet+"_"+channel2);
+	saveAs("Tiff",threshold2dir+titlet);
 	close();
 	
 }
@@ -103,12 +103,10 @@ Array.show(Avg1countArray);
 Array.show(Avg1areaArray);
 Array.show(Avg2countArray);
 Array.show(Avg2areaArray);
-Array.show(name1Array);
-Array.show(name2Array);
 
-//selectWindow("Log");
-//saveAs("Text", colocdir+"Thresholding.csv");
-//run("Close");
+selectWindow("Log");
+saveAs("Text", colocdir+"Thresholding.csv");
+run("Close");
 
 threshold1list = getFileList(threshold1dir);
 threshold2list = getFileList(threshold2dir);
@@ -117,7 +115,7 @@ puncta2list = getFileList(puncta2dir);
 
 overlay();
 
-print("image,threshold,"+channel1+" ROI over "+channel2+" mask,"+channel2+" ROI over "+channel1+" mask");
+print(channel1+" ROI over "+channel2+" mask,puncta,"+channel2+" ROI over "+channel1+" mask,puncta");
 chan21Array = newArray(l,"");
 chan12Array = newArray(l,"");
 a=0;
@@ -126,24 +124,74 @@ for (i=0;i<threshold1list.length;i++) {
 	run("Stack to Images");
 	open(threshold2dir+threshold2list[i]);
 	run("Stack to Images");
-
-	t=0;
-	colocalize();
-	Array.concat(chan12Array,5);
-	Array.concat(chan21Array,6);
+	chan12 = titlet;
+	chan21 = titlet;
+	for(s=0;s<(nImages/2);s++) {
+		t=0;
+		while(t<160) {		
+			chan12count = name1Array[a];
+			chan21count = name2Array[a];
+			count=0;
+			if(File.exists(puncta1dir+"ROI_"+name1Array[a]+".zip")==1) {
+				run("Clear Results");
+				roiManager("reset");
+				selectImage(name2Array[a]);
+				roiManager("open",puncta1dir+"ROI_"+name1Array[a]+".zip");
+				roiManager("Measure");
+				for(o=0;o<roiManager("Count");o++) {
+					if(getResult("%Area",o) >= 25 ) {
+					count++;
+					}
+				}
+			}
+			chan12 = chan12+","+count;
+			chan12count=chan12count+","+count;
+			count=0;				
+			if(File.exists(puncta2dir+"ROI_"+name2Array[a]+".zip")==1) {
+				run("Clear Results");
+				roiManager("reset");
+				selectImage(name1Array[a]);
+				roiManager("open",puncta2dir+"ROI_"+name2Array[a]+".zip");
+				roiManager("Measure");
+				for(f=0;f<roiManager("Count");f++) {
+					if(getResult("%Area",f) >= 25 ) {
+						count++;
+					}
+				}
+			}
+			chan21count=chan21count+","+count;
+			print(chan12count+","+chan21count);
+			chan21 = chan21+","+count;
+			t=t+3;
+			a=a+1;
+			}
+		print("");
+		run("Close All");
+		chan12Array = Array.concat(chan12Array,chan12);
+		chan21Array = Array.concat(chan21Array,chan21);
+	}
 }
+
 Array.show(chan12Array);
 Array.show(chan21Array);
 
 
 selectWindow("Avg1countArray");
-//saveAs("Text", threshold1dir+"Avg1countArray.csv");
+saveAs("Text", threshold1dir+"Avg1countArray.csv");
 selectWindow("Avg1areaArray");
-//saveAs("Text", threshold1dir+"Avg1areaArray.csv");
+saveAs("Text", threshold1dir+"Avg1areaArray.csv");
 selectWindow("Avg2countArray");
-//saveAs("Text", threshold2dir+"Avg2countArray.csv");
+saveAs("Text", threshold2dir+"Avg2countArray.csv");
 selectWindow("Avg2areaArray");
-//saveAs("Text", threshold2dir+"Avg2areaArray.csv");
+saveAs("Text", threshold2dir+"Avg2areaArray.csv");
+selectWindow("chan12Array");
+saveAs("Text", threshold1dir+"chan12Array.csv");
+selectWindow("chan21Array");
+saveAs("Text", threshold1dir+"chan21Array.csv");
+
+selectWindow("Log");
+saveAs("Text", colocdir+"Colocalization.csv");
+run("Close");
 
 function mask() {
 	title1= getTitle();
@@ -218,51 +266,8 @@ function overlay() {
 		chan1 = getTitle();
 		open(threshold2dir+threshold2list[p]);
 		chan2 = getTitle();
-		run("Merge Channels...", "c1="+chan1+" c2="+chan2+" create");
+		run("Merge Channels...", "c1="+chan2+" c2="+chan1+" create");
 		saveAs("Tiff",colocdir+"overlay_"+chan1+"-"+chan2);
 		close();
 	}
 }
-
-function colocalize() {
-	for(s=0;s<(nImages/2);s++) {
-		while(t<160) {		
-			chan12count = name1Array[a];
-			chan21count = name2Array[a];
-			count=0;
-			if(File.exists(puncta1dir+"ROI_"+name1Array[a]+".zip")==1) {
-				run("Clear Results");
-				roiManager("reset");
-				selectImage(name2Array[a]);
-				roiManager("open",puncta1dir+"ROI_"+name1Array[a]+".zip");
-				roiManager("Measure");
-				for(o=0;o<roiManager("Count");o++) {
-					if(getResult("%Area",o) >= 25 ) {
-							count++;
-						}
-					}
-				}
-			chan12count=chan12count+","+count;
-			count=0;				
-			if(File.exists(puncta2dir+"ROI_"+name2Array[a]+".zip")==1) {
-				run("Clear Results");
-				roiManager("reset");
-				selectImage(name1Array[a]);
-				roiManager("open",puncta2dir+"ROI_"+name2Array[a]+".zip");
-				roiManager("Measure");
-				for(f=0;f<roiManager("Count");f++) {
-					if(getResult("%Area",f) >= 25 ) {
-								count++;
-						}
-					}
-				}
-			chan21count=chan21count+","+count;
-			print(chan12count+","+chan21count);
-			t=t+3;
-			a=a+1;		
-		}
-	}
-	print("");
-	run("Close All");
-}
-
