@@ -124,13 +124,13 @@ for (i=0;i<threshold1list.length;i++) {
 	run("Stack to Images");
 	open(threshold2dir+threshold2list[i]);
 	run("Stack to Images");
-	chan12 = titlet;
-	chan21 = titlet;
 	for(s=0;s<(nImages/2);s++) {
 		t=0;
-		while(t<160) {		
-			chan12count = name1Array[a];
-			chan21count = name2Array[a];
+		chan12count = name1Array[a];
+		chan21count = name2Array[a];
+		while(t<160) {	
+			chan12 = titlet+"_12_"+t;
+			chan21 = titlet+"_21_"+t;	
 			count=0;
 			if(File.exists(puncta1dir+"ROI_"+name1Array[a]+".zip")==1) {
 				run("Clear Results");
@@ -143,9 +143,9 @@ for (i=0;i<threshold1list.length;i++) {
 					count++;
 					}
 				}
-			}
 			chan12 = chan12+","+count;
 			chan12count=chan12count+","+count;
+			}
 			count=0;				
 			if(File.exists(puncta2dir+"ROI_"+name2Array[a]+".zip")==1) {
 				run("Clear Results");
@@ -159,19 +159,18 @@ for (i=0;i<threshold1list.length;i++) {
 					}
 				}
 			}
-			chan21count=chan21count+","+count;
-			print(chan12count+","+chan21count);
 			chan21 = chan21+","+count;
+			chan21count=chan21count+","+count;
 			t=t+3;
-			a=a+1;
+			print(chan12+","+chan21);
 			}
+		a=a+1;
 		print("");
 		run("Close All");
-		chan12Array = Array.concat(chan12Array,chan12);
-		chan21Array = Array.concat(chan21Array,chan21);
+		chan12Array = Array.concat(chan12Array,chan12count);
+		chan21Array = Array.concat(chan21Array,chan21count);
 	}
 }
-
 Array.show(chan12Array);
 Array.show(chan21Array);
 
@@ -185,10 +184,9 @@ saveAs("Text", threshold2dir+"Avg2countArray.csv");
 selectWindow("Avg2areaArray");
 saveAs("Text", threshold2dir+"Avg2areaArray.csv");
 selectWindow("chan12Array");
-saveAs("Text", threshold1dir+"chan12Array.csv");
+saveAs("Text", colocdir+"chan12Array.csv");
 selectWindow("chan21Array");
-saveAs("Text", threshold1dir+"chan21Array.csv");
-
+saveAs("Text", colocdir+"chan21Array.csv");
 selectWindow("Log");
 saveAs("Text", colocdir+"Colocalization.csv");
 run("Close");
@@ -201,7 +199,7 @@ function mask() {
 	setThreshold(t, 255);
 	run("Find Maxima...", "noise=10 output=[Segmented Particles] above");
 	selectImage(title1+" Segmented");
-	run("Analyze Particles...", "size=1-60 pixel show=Masks add");
+	run("Analyze Particles...", "size=1-100 pixel show=Masks add");
 	number = roiManager("count");	
 	roiManager("Measure");
 	area = 0;
