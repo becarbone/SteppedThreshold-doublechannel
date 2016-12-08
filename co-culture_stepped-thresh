@@ -1,0 +1,164 @@
+var source1dir, puncta1dir, source1list, puncta1list, slice, Avg1countArray;
+var channel1, channel2, channel, title, title1, titlet, number, area, name1Array, name2Array;
+var Avg1areaArray, countArray, areaArray, l, colos, source2dir, source2list;
+var puncta2dir, puncta2list, Avg2areaArray, Avg2countArray, Num, are;
+
+waitForUser("This macro needs several folders: \n-two with the separate channel images \n-two empty ones for the puncta \n-two empty ones for masks");
+source1dir = getDirectory("Choose folder for channel 1");
+source1list = getFileList(source1dir);
+Dialog.create("");
+	colos = newArray("Green", "Red", "Blue", "Cyan");
+	Dialog.addChoice("Channel 1 color", colos, "Green");
+Dialog.show;
+channel1 = Dialog.getChoice;
+
+source2dir = getDirectory("Choose folder for channel 2");
+source2list = getFileList(source2dir);
+Dialog.create("");
+	Dialog.addChoice("Channel 2 color", colos, "Red");
+Dialog.show;
+channel2 = Dialog.getChoice;
+
+puncta1dir = getDirectory("Choose folder for "+channel1+" masks");
+threshold1dir = getDirectory("Choose folder for "+channel1+" puncta");
+puncta2dir = getDirectory("Choose folder for "+channel2+" masks");
+threshold2dir = getDirectory("choosefolder for "+channel2+" puncta");
+
+name1Array = newArray();
+name2Array = newArray();
+
+l = "thresholding";
+for(t=0;t<160;t+=3) {
+	l = l +"," + t;
+}
+Avg1areaArray = newArray(l,"");
+Avg1countArray = newArray(l,"");
+Avg2areaArray = newArray(l,"");
+Avg2countArray = newArray(l,"");
+for (i=0;i<source1list.length; i++) {
+	open(source1dir+source1list[i]);
+	title = getTitle();
+	run("Properties...", "channels=1 slices=1 frames=1 unit=um pixel_width=0.1705 pixel_height=0.1705 voxel_depth=1");
+	run("Gaussian Blur...", "sigma=1");
+	setColor("Magenta");
+	Num = title;
+	are = title;
+	g = 1;
+	for(t=0;t<160;t+=3) {
+		selectImage(title);
+		titlet = substring(title, 0, lengthOf(title)-4);
+		name1Array = Array.concat(name1Array, titlet+"_"+t);
+		mask();
+		Num = Num + "," +number;
+		are = are + "," +area;
+	}
+	Avg1countArray = Array.concat(Avg1countArray, Num);
+	Avg1areaArray = Array.concat(Avg1areaArray, are);
+	selectImage(title);
+	close();
+	selectWindow(title+"_"+channel1+0+"_mask");
+	run("Select None");
+	setSlice(1);
+	run("Labels...", "color=magenta font=10 show");
+	run("Label...", "format=Label starting=0 interval=1 x=5 y=5 font=8 text=[] range=1-51 use");
+	saveAs("Tiff",threshold1dir+titlet);
+	close();
+
+	open(source2dir+source2list[i]);
+	title = getTitle();
+	run("Properties...", "channels=1 slices=1 frames=1 unit=um pixel_width=0.1705 pixel_height=0.1705 voxel_depth=1");
+	run("Gaussian Blur...", "sigma=1");
+	Num = title;
+	are = title;
+	g = 2;
+	for(t=0;t<160;t+=3) {
+		selectImage(title);
+		titlet = substring(title, 0, lengthOf(title)-4);
+		name2Array = Array.concat(name2Array,titlet+"_"+t);
+		mask();
+		Num = Num + "," +number;
+		are = are + "," +area;
+	}
+	Avg2countArray = Array.concat(Avg2countArray, Num);
+	Avg2areaArray = Array.concat(Avg2areaArray, are);
+	selectImage(title);
+	close();
+	selectWindow(title+"_"+channel2+0+"_mask");
+	run("Select None");
+	run("Labels...", "color=magenta font=10 show");
+	run("Label...", "format=Label starting=0 interval=1 x=5 y=5 font=8 text=[] range=1-51 use");
+	saveAs("Tiff",threshold2dir+titlet);
+	close();
+}
+Array.show(Avg1areaArray);
+Array.show(Avg1countArray);
+Array.show(Avg2areaArray);
+Array.show(Avg2countArray);
+
+
+function mask() {
+	title1 = getTitle();
+	run("Clear Results");
+	run("Threshold...");
+	setAutoThreshold("Default dark");
+	setThreshold(t,255);
+	run("Find Maxima...", "noise=10 output=[Segmented Particles] above");
+	selectImage(title1+" Segmented");
+	run("Analyze Particles...", "size=1-60 pixel show=Masks add");
+	number = roiManager("count");	
+	roiManager("Measure");
+	area = 0;
+	if(roiManager("count")>0) {
+		if(g==1) {
+			roiManager("Save",puncta1dir+"ROI_"+titlet+"_"+t+".zip");
+			for(j=0;j<nResults;j++) {
+				area = area + getResult("Area",j);
+			}
+			area = area/nResults;
+		}
+		else if (g==2) {
+			roiManager("Save",puncta2dir+"ROI_"+titlet+"_"+t+".zip");
+			for(j=0;j<nResults;j++) {
+				area = area + getResult("Area",j);
+			}
+			area = area/nResults;
+		}
+	}
+	roiManager("reset");
+	if(g==1) {
+		selectImage("Mask of "+title1+" Segmented"); 
+		rename(title+"_"+channel1+t+"_mask");
+		selectImage(title1+" Segmented");
+		close();
+			if(t>0){
+			selectImage(title+"_"+channel1+t+"_mask");
+			run("Select All");
+			run("Copy");
+			close();
+			selectImage(title+"_"+channel1+0+"_mask");
+			run("Add Slice");
+			setSlice(nSlices);
+			titlet = substring(title,0, lengthOf(title)-4);
+			run("Set Label...", "label="+titlet+"_"+t);
+			run("Paste");
+			}
+	}
+	else if(g==2) {
+		selectImage("Mask of "+title1+" Segmented"); 
+		rename(title+"_"+channel2+t+"_mask");
+		selectImage(title1+" Segmented");
+		close();
+		if(t>0){
+			selectImage(title+"_"+channel2+t+"_mask");
+			run("Select All");
+			run("Copy");
+			close();
+			selectImage(title+"_"+channel2+0+"_mask");
+			run("Add Slice");
+			setSlice(nSlices);
+			titlet = substring(title,0, lengthOf(title)-4);
+			run("Set Label...", "label="+titlet+"_"+t);
+			run("Paste");
+		}
+	}
+}
