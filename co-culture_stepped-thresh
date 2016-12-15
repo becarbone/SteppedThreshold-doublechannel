@@ -1,7 +1,7 @@
 var source1dir, puncta1dir, source1list, puncta1list, slice, Avg1countArray;
 var channel1, channel2, channel, title, title1, titlet, number, area, name1Array, name2Array;
 var Avg1areaArray, countArray, areaArray, l, colos, source2dir, source2list;
-var puncta2dir, puncta2list, Avg2areaArray, Avg2countArray, Num, are;
+var puncta2dir, puncta2list, Avg2areaArray, Avg2countArray, Num, are, one, two;
 
 waitForUser("This macro needs several folders: \n-two with the separate channel images \n-two empty ones for the puncta \n-two empty ones for masks");
 source1dir = getDirectory("Choose folder for channel 1");
@@ -19,10 +19,11 @@ Dialog.create("");
 Dialog.show;
 channel2 = Dialog.getChoice;
 
-puncta1dir = getDirectory("Choose folder for "+channel1+" masks");
-threshold1dir = getDirectory("Choose folder for "+channel1+" puncta");
-puncta2dir = getDirectory("Choose folder for "+channel2+" masks");
-threshold2dir = getDirectory("choosefolder for "+channel2+" puncta");
+puncta1dir = getDirectory("Choose folder for "+channel1+" puncta");
+threshold1dir = getDirectory("Choose folder for "+channel1+" masks");
+puncta2dir = getDirectory("Choose folder for "+channel2+" puncta");
+threshold2dir = getDirectory("Choose folder for "+channel2+" masks");
+resultsdir = getDirectory("Choose folder for excel files");
 
 name1Array = newArray();
 name2Array = newArray();
@@ -35,6 +36,8 @@ Avg1areaArray = newArray(l,"");
 Avg1countArray = newArray(l,"");
 Avg2areaArray = newArray(l,"");
 Avg2countArray = newArray(l,"");
+PxA1array = newArray(l,"");
+PxA2array = newArray(l,"");
 for (i=0;i<source1list.length; i++) {
 	open(source1dir+source1list[i]);
 	title = getTitle();
@@ -44,14 +47,17 @@ for (i=0;i<source1list.length; i++) {
 	Num = title;
 	are = title;
 	g = 1;
+	one = title+",";
 	for(t=0;t<160;t+=3) {
 		selectImage(title);
 		titlet = substring(title, 0, lengthOf(title)-4);
 		name1Array = Array.concat(name1Array, titlet+"_"+t);
 		mask();
+		one = one + "="+area+"*"+number +",";
 		Num = Num + "," +number;
 		are = are + "," +area;
 	}
+	PxA1array = Array.concat(PxA1array,one);
 	Avg1countArray = Array.concat(Avg1countArray, Num);
 	Avg1areaArray = Array.concat(Avg1areaArray, are);
 	selectImage(title);
@@ -59,7 +65,6 @@ for (i=0;i<source1list.length; i++) {
 	selectWindow(title+"_"+channel1+0+"_mask");
 	run("Select None");
 	setSlice(1);
-	run("Labels...", "color=magenta font=10 show");
 	run("Label...", "format=Label starting=0 interval=1 x=5 y=5 font=8 text=[] range=1-51 use");
 	saveAs("Tiff",threshold1dir+titlet);
 	close();
@@ -71,21 +76,23 @@ for (i=0;i<source1list.length; i++) {
 	Num = title;
 	are = title;
 	g = 2;
+	two = title+",";
 	for(t=0;t<160;t+=3) {
 		selectImage(title);
 		titlet = substring(title, 0, lengthOf(title)-4);
 		name2Array = Array.concat(name2Array,titlet+"_"+t);
 		mask();
+		two = two + "="+area+"*"+number +",";
 		Num = Num + "," +number;
 		are = are + "," +area;
 	}
+	PxA2array = Array.concat(PxA2array,two);
 	Avg2countArray = Array.concat(Avg2countArray, Num);
 	Avg2areaArray = Array.concat(Avg2areaArray, are);
 	selectImage(title);
 	close();
 	selectWindow(title+"_"+channel2+0+"_mask");
 	run("Select None");
-	run("Labels...", "color=magenta font=10 show");
 	run("Label...", "format=Label starting=0 interval=1 x=5 y=5 font=8 text=[] range=1-51 use");
 	saveAs("Tiff",threshold2dir+titlet);
 	close();
@@ -94,6 +101,21 @@ Array.show(Avg1areaArray);
 Array.show(Avg1countArray);
 Array.show(Avg2areaArray);
 Array.show(Avg2countArray);
+Array.show(PxA1array);
+Array.show(PxA2array);
+
+selectWindow("Avg1areaArray");
+saveAs("Results",resultsdir+channel1+"area.csv");
+selectWindow("Avg1countArray");
+saveAs("Results",resultsdir+channel1+"puncta.csv");
+selectWindow("Avg2areaArray");
+saveAs("Results",resultsdir+channel2+"area.csv");
+selectWindow("Avg2countArray");
+saveAs("Results",resultsdir+channel2+"puncta.csv");
+selectWindow("PxA1array");
+saveAs("Results",resultsdir+"PxA"+channel1+".csv");
+selectWindow("PxA2array");
+saveAs("Results",resultsdir+"PxA"+channel2+".csv");
 
 
 function mask() {
@@ -102,8 +124,9 @@ function mask() {
 	run("Threshold...");
 	setAutoThreshold("Default dark");
 	setThreshold(t,255);
-	run("Find Maxima...", "noise=10 output=[Segmented Particles] above");
+	run("Find Maxima...", "noise=7.5 output=[Segmented Particles] above");
 	selectImage(title1+" Segmented");
+	run("Watershed");
 	run("Analyze Particles...", "size=1-60 pixel show=Masks add");
 	number = roiManager("count");	
 	roiManager("Measure");
